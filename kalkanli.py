@@ -1,7 +1,7 @@
 import sys
 import copy
 
-n_util_calls = 0
+n_util_calls = [0]
 n_actions = 0
 move_dict = {
     'N': (-1, 0),
@@ -27,84 +27,85 @@ def pprint(state):
         print()
 
 def compute_utility(board):
-    global n_util_calls
-    n_util_calls = n_util_calls + 1
+    n_util_calls[0] += 1
     Q = sum(row.count('Q1') for row in board) - sum(row.count('Q2') for row in board)
     R = sum(row.count('R1') for row in board) - sum(row.count('R2') for row in board)
     B = sum(row.count('B1') for row in board) - sum(row.count('B2') for row in board)
     return 9 * Q + 5 * R + 3 * B
 
-def move_to_final_state(move, frm, state):
-    n = len(state)
-    i = frm[0] + move[0]
-    j = frm[1] + move[1]
-    while(i < n and j < n and i >= 0 and j >= 0):
-        if(state[i][j] == 'x'):
-            i += move[0]
-            j += move[1]
-        elif(state[i][j][1] != state[frm[0]][frm[1]][1]):
-            break
-        else:
-            i -= move[0]
-            j -= move[1]
-            break
-    if i == n: i = n - 1
-    if j == n: j = n - 1
-    if i == -1: i = 0
-    if j == -1: j = 0
+def move_to_final_state(direction, frm, board):
+    n = len(board)
+    move = move_dict[direction]
+    i = frm[0]
+    j = frm[1]
+    k = i + move[0]
+    l = j + move[1]
 
+    while(k < n and l < n and k >= 0 and l >= 0):
+        if(board[k][l] == 'x'):
+            i = k
+            j = l
+            k += move[0]
+            l += move[1]
+        else:
+            i = k
+            j = l
+            break
     if(i == frm[0] and j == frm[1]):
         return None
     
-    temp = state[frm[0]][frm[1]]
-    state[frm[0]][frm[1]] = 'x'
-    state[i][j] = temp
-    return state
+    temp = board[frm[0]][frm[1]]
+    board[frm[0]][frm[1]] = 'x'
+    board[i][j] = temp
+    return {'board': board, 'move': "{} {}".format(board[i][j][0], direction)}
 
-def move(i, j, state):
-    piece = state[i][j][0]
+def move(i, j, board):
+    piece = board[i][j][0]
     legal_moves = piece_moves[piece]
     states = []
     for move in legal_moves:
-        x = copy.deepcopy(state)
-        result = move_to_final_state(move_dict[move], (i, j), x)
+        x = copy.deepcopy(board)
+        result = move_to_final_state(move, (i, j), x)
         if result != None:
             states.append(result)
     return states
 
-def get_pieces(state, agent):
+def get_pieces(board, agent):
     pieces = []
-    for i in range(len(state)):
-        for j in range(len(state)):
-            if(state[i][j] != 'x' and state[i][j][1] == agent):
+    for i in range(len(board)):
+        for j in range(len(board)):
+            if(board[i][j] != 'x' and board[i][j][1] == agent):
                 pieces.append((i,j))
     return pieces
 
 def minimax(state, depth, is_max):
     if(depth == n_actions*2):
-        return compute_utility(state)
+        state['utility'] = compute_utility(state['board'])
+        return state
     if(is_max):
-        pieces = get_pieces(state, '1')
-        value = -9000
+        pieces = get_pieces(state['board'], '1')
+        state['utility'] = -9000
         child_nodes = []
         for piece in pieces:
-            child_nodes.extend(move(piece[0], piece[1], state))
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
         for node in child_nodes:
             temp = minimax(node, depth+1, False)
-            if temp > value:
-                value = temp
-        return value
+            if temp['utility'] > state['utility']:
+                state['utility'] = temp['utility']
+                state['next_move'] = temp['move']
+        return state
     else:
-        pieces = get_pieces(state, '2')
-        value = 9000
+        pieces = get_pieces(state['board'], '2')
+        state['utility'] = 9000
         child_nodes = []
         for piece in pieces:
-            child_nodes.extend(move(piece[0], piece[1], state))
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
         for node in child_nodes:
             temp = minimax(node, depth+1, True)
-            if temp < value:
-                value = temp
-        return value
+            if temp['utility'] < state['utility']:
+                state['utility'] = temp['utility']
+                state['next_move'] = temp['move']
+        return state
 
 
 def main(argv):
@@ -117,14 +118,23 @@ def main(argv):
     n = f.readline()
     n1 = int(n.split(' ')[0])
     
-    initial_state = []
+    initial_board = []
     for i in range(n1):
         line = f.readline()
         tokens = line.split(' ')
-        initial_state.append([token.replace('\n', '') for token in tokens])
-    print(minimax(initial_state, 0, True))
-    print(n_util_calls)
+        initial_board.append([token.replace('\n', '') for token in tokens])
     
+    # x = move(0, 3, initial_board)
+    # for y in x:
+    #     print(y['move'])
+    #     pprint(y['board'])
+    #     print()
+    # return
+    root_node = {'board': initial_board}
+    result = minimax(root_node, 0, True)
+    print("Action: {}".format(result['next_move']))
+    print("Value: {}".format(result['utility']))
+    print("Util calls: {}".format(n_util_calls[0]))
 
 if __name__ == '__main__':
     main(sys.argv[1:])
