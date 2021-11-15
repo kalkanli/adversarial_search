@@ -90,10 +90,10 @@ def minimax(state, depth, is_max):
         for piece in pieces:
             child_nodes.extend(move(piece[0], piece[1], state['board']))
         for node in child_nodes:
-            temp = minimax(node, depth+1, False)
-            if temp['utility'] > state['utility']:
-                state['utility'] = temp['utility']
-                state['next_move'] = temp['move']
+            child = minimax(node, depth+1, False)
+            if child['utility'] > state['utility']:
+                state['utility'] = child['utility']
+                state['next_move'] = child['move']
         return state
     else:
         pieces = get_pieces(state['board'], '2')
@@ -102,10 +102,37 @@ def minimax(state, depth, is_max):
         for piece in pieces:
             child_nodes.extend(move(piece[0], piece[1], state['board']))
         for node in child_nodes:
-            temp = minimax(node, depth+1, True)
-            if temp['utility'] < state['utility']:
-                state['utility'] = temp['utility']
-                state['next_move'] = temp['move']
+            child = minimax(node, depth+1, True)
+            if child['utility'] < state['utility']:
+                state['utility'] = child['utility']
+                state['next_move'] = child['move']
+        return state
+
+def minimax_rand(state, depth, is_max):
+    if(depth == n_actions*2):
+        state['utility'] = compute_utility(state['board'])
+        return state
+    if(is_max):
+        pieces = get_pieces(state['board'], '1')
+        state['utility'] = -9000
+        child_nodes = []
+        for piece in pieces:
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
+        for node in child_nodes:
+            child = minimax_rand(node, depth+1, False)
+            if child['utility'] > state['utility']:
+                state['utility'] = child['utility']
+                state['next_move'] = child['move']
+        return state
+    else:
+        pieces = get_pieces(state['board'], '2')
+        child_nodes = []
+        state['utility'] = 0.
+        for piece in pieces:
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
+        for node in child_nodes:
+            child = minimax_rand(node, depth+1, True)
+            state['utility'] += float(child['utility']) / len(child_nodes)
         return state
 
 def alpha_beta_pruning(state, depth, a, b, is_max):
@@ -169,9 +196,11 @@ def main(argv):
         root_node = {'board': initial_board}
         result = alpha_beta_pruning(root_node, 0, -9000, 9000, True)
     elif(search_type == 'minimax_rand'):
-        print()
+        root_node = {'board': initial_board}
+        result = minimax_rand(root_node, 0, True)
+    
     print("Action: Move {}".format(result['next_move']))
-    print("Value: {}".format(result['utility']))
+    print("Value: {:.2f}".format(result['utility']))
     print("Util calls: {}".format(n_util_calls[0]))
 
 if __name__ == '__main__':
