@@ -14,10 +14,11 @@ move_dict = {
     'SW': (1, -1)
 }
 
+#N,NE,E,SE,S,SW,W,NW
 piece_moves = {
-    'Q': ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'],
-    'R': ['N', 'S', 'E', 'W'],
-    'B': ['NE', 'NW', 'SE', 'SW']
+    'Q': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+    'R': ['N', 'E', 'S', 'W'],
+    'B': ['NE', 'SE', 'SW', 'NW']
 }
 
 def pprint(state):
@@ -107,6 +108,43 @@ def minimax(state, depth, is_max):
                 state['next_move'] = temp['move']
         return state
 
+def alpha_beta_pruning(state, depth, a, b, is_max):
+    if(depth == n_actions*2):
+        state['utility'] = compute_utility(state['board'])
+        return state
+    if(is_max):
+        pieces = get_pieces(state['board'], '1')
+        state['utility'] = -9000
+        child_nodes = []
+        for piece in pieces:
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
+        for node in child_nodes:
+            child = alpha_beta_pruning(node, depth + 1, a, b, False)
+            if child['utility'] > state['utility']:
+                state['utility'] = child['utility']
+                state['next_move'] = child['move']
+            if(state['utility'] >= b):
+                break
+            if state['utility'] > a:
+                a = state['utility']
+        return state
+    else:
+        pieces = get_pieces(state['board'], '2')
+        state['utility'] = 9000
+        child_nodes = []
+        for piece in pieces:
+            child_nodes.extend(move(piece[0], piece[1], state['board']))
+        for node in child_nodes:
+            child = alpha_beta_pruning(node, depth + 1, a, b, True)
+            if child['utility'] < state['utility']:
+                state['utility'] = child['utility']
+                state['next_move'] = child['move']
+            if(state['utility'] <= a):
+                break
+            if state['utility'] < b:
+                b = state['utility']
+        return state
+
 
 def main(argv):
     search_type = argv[0]
@@ -124,15 +162,15 @@ def main(argv):
         tokens = line.split(' ')
         initial_board.append([token.replace('\n', '') for token in tokens])
     
-    # x = move(0, 3, initial_board)
-    # for y in x:
-    #     print(y['move'])
-    #     pprint(y['board'])
-    #     print()
-    # return
-    root_node = {'board': initial_board}
-    result = minimax(root_node, 0, True)
-    print("Action: {}".format(result['next_move']))
+    if(search_type == 'minimax'):
+        root_node = {'board': initial_board}
+        result = minimax(root_node, 0, True)
+    elif(search_type == 'alpha_beta_pruning'):
+        root_node = {'board': initial_board}
+        result = alpha_beta_pruning(root_node, 0, -9000, 9000, True)
+    elif(search_type == 'minimax_rand'):
+        print()
+    print("Action: Move {}".format(result['next_move']))
     print("Value: {}".format(result['utility']))
     print("Util calls: {}".format(n_util_calls[0]))
 
